@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scrollbar globale — fine et sombre */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #374151; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+* { scrollbar-width: thin; scrollbar-color: #374151 transparent; }
