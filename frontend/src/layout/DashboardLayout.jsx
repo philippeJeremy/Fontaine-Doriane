@@ -93,7 +93,7 @@ export default function DashboardLayout() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <p className="text-sauge-600 font-semibold text-sm">Fontaine Doriane — Admin</p>
+          <p className="text-sauge-600 font-semibold text-sm">Les ongles de Doriane — Admin</p>
         </header>
 
         <main className="flex-1 p-4 md:p-8 overflow-auto">
