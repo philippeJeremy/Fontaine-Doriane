@@ -12,7 +12,6 @@ from modules.invoices import models as _invoices  # noqa
 
 from modules.appointments.models import WorkingHours
 from modules.settings.models import AppSettings
-from modules.services.models import Service 
 from database import SessionLocal
 
 Base.metadata.create_all(bind=engine)
