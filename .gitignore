@@ -7,7 +7,7 @@ node_modules/
 dist/
 *.csv
 *.xlsx
-*.txt
+note.txt
 .claude/
 seed_admin.py
 logs/
