@@ -13,6 +13,7 @@ from limiter import limiter
 from modules.appointments import routes as appointments
 from modules.calendar import routes as calendar
 from modules.gallery import routes as gallery
+from modules.invoices import routes as invoices
 from modules.services import routes as services
 from modules.settings import routes as settings
 from modules.uploads import routes as uploads
@@ -94,6 +95,7 @@ app.include_router(appointments.router)
 app.include_router(calendar.router)
 app.include_router(settings.router)
 app.include_router(uploads.router)
+app.include_router(invoices.router)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 

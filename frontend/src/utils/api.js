@@ -26,12 +26,13 @@ async function tryRefresh() {
 async function apiFetch(path, options = {}) {
   const token = getAccessToken();
   const isJson = !(options.body instanceof FormData);
+  const wantBlob = !!options.blob;
 
   const res = await fetch(`/api${path}`, {
     ...options,
     credentials: "include",
     headers: {
-      ...(isJson ? { "Content-Type": "application/json" } : {}),
+      ...(isJson && !wantBlob ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -43,11 +44,13 @@ async function apiFetch(path, options = {}) {
   }
 
   if (!res.ok) {
+    if (wantBlob) throw new Error("Erreur serveur");
     const err = await res.json().catch(() => ({ detail: "Erreur réseau" }));
     throw new Error(err.detail ?? "Erreur serveur");
   }
 
   if (res.status === 204) return null;
+  if (wantBlob) return res.blob();
   return res.json();
 }
 
@@ -58,4 +61,5 @@ export const api = {
   patch: (path, body) => apiFetch(path, { method: "PATCH", body: JSON.stringify(body) }),
   delete: (path) => apiFetch(path, { method: "DELETE" }),
   upload: (path, formData) => apiFetch(path, { method: "POST", body: formData }),
+  blob: (path) => apiFetch(path, { blob: true }),
 };

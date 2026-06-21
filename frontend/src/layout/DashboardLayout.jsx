@@ -5,6 +5,7 @@ import { logout } from "../utils/auth";
 const links = [
   { to: "/admin/planning",    label: "Planning",    icon: "📆" },
   { to: "/admin/rendez-vous", label: "Rendez-vous", icon: "📋" },
+  { to: "/admin/factures",    label: "Factures",    icon: "🧾" },
   { to: "/admin/prestations", label: "Prestations", icon: "💅" },
   { to: "/admin/galerie",     label: "Galerie",     icon: "🖼️" },
   { to: "/admin/calendrier",  label: "Calendrier",  icon: "🗓️" },

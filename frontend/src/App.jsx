@@ -20,6 +20,7 @@ import AdminPrestations from "./pages/admin/AdminPrestations";
 import AdminGalerie from "./pages/admin/AdminGalerie";
 import AdminCalendrier from "./pages/admin/AdminCalendrier";
 import AdminPlanning from "./pages/admin/AdminPlanning";
+import AdminFactures from "./pages/admin/AdminFactures";
 
 // ── Garde : authentification requise ─────────────────────────────────────────
 function PrivateRoute({ children }) {
@@ -92,6 +93,7 @@ export default function App() {
             <Route index element={<Navigate to="/admin/rendez-vous" replace />} />
             <Route path="rendez-vous" element={<AdminRendezVous />} />
             <Route path="planning" element={<AdminPlanning />} />
+            <Route path="factures" element={<AdminFactures />} />
             <Route path="prestations" element={<AdminPrestations />} />
             <Route path="galerie" element={<AdminGalerie />} />
             <Route path="calendrier" element={<AdminCalendrier />} />

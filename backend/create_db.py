@@ -8,6 +8,7 @@ from modules.services import models as _services  # noqa
 from modules.gallery import models as _gallery  # noqa
 from modules.appointments import models as _appointments  # noqa
 from modules.settings import models as _settings  # noqa
+from modules.invoices import models as _invoices  # noqa
 
 from modules.appointments.models import WorkingHours
 from modules.settings.models import AppSettings
