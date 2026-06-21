@@ -2,16 +2,55 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../utils/api";
 
+function ServiceCarousel({ service }) {
+  const [idx, setIdx] = useState(0);
+  const imgs = [service.image_url, service.image_url_2, service.image_url_3].filter(Boolean);
+
+  if (imgs.length === 0) {
+    return (
+      <div className="w-full aspect-square bg-gradient-to-br from-sauge-100 to-sauge-50 flex items-center justify-center text-5xl">
+        💅
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full aspect-square bg-stone-50 overflow-hidden group">
+      <img
+        key={idx}
+        src={imgs[idx]}
+        alt={service.name}
+        className="w-full h-full object-contain transition-opacity duration-300"
+      />
+      {imgs.length > 1 && (
+        <>
+          <button
+            onClick={e => { e.preventDefault(); setIdx(i => (i - 1 + imgs.length) % imgs.length); }}
+            className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/90 rounded-full shadow flex items-center justify-center text-stone-600 opacity-0 group-hover:opacity-100 transition text-lg leading-none"
+          >‹</button>
+          <button
+            onClick={e => { e.preventDefault(); setIdx(i => (i + 1) % imgs.length); }}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/90 rounded-full shadow flex items-center justify-center text-stone-600 opacity-0 group-hover:opacity-100 transition text-lg leading-none"
+          >›</button>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {imgs.map((_, i) => (
+              <button
+                key={i}
+                onClick={e => { e.preventDefault(); setIdx(i); }}
+                className={`w-1.5 h-1.5 rounded-full transition ${i === idx ? "bg-sauge-500" : "bg-stone-300"}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ServiceCard({ service }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden flex flex-col">
-      {service.image_url ? (
-        <img src={service.image_url} alt={service.name} className="w-full h-48 object-cover" />
-      ) : (
-        <div className="w-full h-48 bg-gradient-to-br from-sauge-100 to-sauge-50 flex items-center justify-center text-5xl">
-          💅
-        </div>
-      )}
+      <ServiceCarousel service={service} />
       <div className="p-5 flex flex-col flex-1">
         <p className="text-xs text-sauge-400 font-medium uppercase tracking-wider mb-1">
           {service.category}

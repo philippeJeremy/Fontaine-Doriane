@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../utils/api";
 
-const EMPTY = { name: "", description: "", price: "", duration_minutes: "", category: "Soin", image_url: "", sort_order: 0 };
+const EMPTY = { name: "", description: "", price: "", duration_minutes: "", category: "Soin", image_url: "", image_url_2: "", image_url_3: "", sort_order: 0 };
 
 export default function AdminPrestations() {
   const [services, setServices] = useState([]);
@@ -9,9 +9,11 @@ export default function AdminPrestations() {
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null); // id ou null
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState(null); // null | 1 | 2 | 3
   const [error, setError] = useState("");
-  const fileRef = useRef(null);
+  const fileRef1 = useRef(null);
+  const fileRef2 = useRef(null);
+  const fileRef3 = useRef(null);
 
   useEffect(() => {
     api.get("/services/all")
@@ -30,25 +32,28 @@ export default function AdminPrestations() {
       price: String(s.price),
       duration_minutes: String(s.duration_minutes),
       category: s.category,
-      image_url: s.image_url ?? "",
+      image_url:   s.image_url   ?? "",
+      image_url_2: s.image_url_2 ?? "",
+      image_url_3: s.image_url_3 ?? "",
       sort_order: s.sort_order,
     });
     setError("");
   }
 
-  async function handleImageFile(e) {
+  async function handleImageFile(e, slot) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
+    setUploading(slot);
+    const field = slot === 1 ? "image_url" : slot === 2 ? "image_url_2" : "image_url_3";
     try {
       const fd = new FormData();
       fd.append("file", file);
       const data = await api.upload("/uploads/image", fd);
-      setForm(v => ({ ...v, image_url: data.url }));
+      setForm(v => ({ ...v, [field]: data.url }));
     } catch (err) {
       setError(err.message);
     } finally {
-      setUploading(false);
+      setUploading(null);
       e.target.value = "";
     }
   }
@@ -68,7 +73,9 @@ export default function AdminPrestations() {
       price: parseFloat(form.price),
       duration_minutes: parseInt(form.duration_minutes, 10),
       sort_order: parseInt(form.sort_order, 10),
-      image_url: form.image_url || null,
+      image_url:   form.image_url   || null,
+      image_url_2: form.image_url_2 || null,
+      image_url_3: form.image_url_3 || null,
       description: form.description || null,
     };
     try {
@@ -137,40 +144,45 @@ export default function AdminPrestations() {
               <label className="block text-xs font-medium text-stone-600 mb-1">Description</label>
               <textarea value={form.description} onChange={set("description")} rows={2} className={inputCls + " resize-none"} />
             </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-stone-600 mb-1">Image</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={form.image_url}
-                  onChange={set("image_url")}
-                  className={`${inputCls} flex-1`}
-                  placeholder="https://… ou choisir un fichier →"
-                />
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={handleImageFile}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  disabled={uploading}
-                  onClick={() => fileRef.current?.click()}
-                  className="shrink-0 border border-sauge-200 text-sauge-500 hover:bg-sauge-50 disabled:opacity-50 text-sm px-3 py-2 rounded-xl transition"
-                >
-                  {uploading ? "Upload…" : "📂 Fichier"}
-                </button>
-              </div>
-              {form.image_url && (
-                <img
-                  src={form.image_url}
-                  alt=""
-                  className="mt-2 h-20 rounded-lg object-cover"
-                  onError={e => { e.target.style.display = "none"; }}
-                />
-              )}
+            <div className="sm:col-span-2 space-y-3">
+              <label className="block text-xs font-medium text-stone-600">Photos (jusqu'à 3)</label>
+              {[
+                { slot: 1, field: "image_url",   ref: fileRef1, label: "Photo 1 (principale)" },
+                { slot: 2, field: "image_url_2", ref: fileRef2, label: "Photo 2" },
+                { slot: 3, field: "image_url_3", ref: fileRef3, label: "Photo 3" },
+              ].map(({ slot, field, ref, label }) => (
+                <div key={slot}>
+                  <p className="text-xs text-stone-400 mb-1">{label}</p>
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={form[field]}
+                          onChange={set(field)}
+                          className={`${inputCls} flex-1`}
+                          placeholder="https://… ou choisir un fichier →"
+                        />
+                        <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+                          onChange={e => handleImageFile(e, slot)} className="hidden" />
+                        <button type="button" disabled={uploading === slot}
+                          onClick={() => ref.current?.click()}
+                          className="shrink-0 border border-sauge-200 text-sauge-500 hover:bg-sauge-50 disabled:opacity-50 text-sm px-3 py-2 rounded-xl transition">
+                          {uploading === slot ? "Upload…" : "📂"}
+                        </button>
+                      </div>
+                      {form[field] && (
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <img src={form[field]} alt="" className="h-16 rounded-lg object-contain bg-stone-50 border border-stone-100"
+                            onError={e => { e.target.style.display = "none"; }} />
+                          <button type="button" onClick={() => setForm(v => ({ ...v, [field]: "" }))}
+                            className="text-xs text-red-400 hover:text-red-600">✕ Supprimer</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
             <div>
               <label className="block text-xs font-medium text-stone-600 mb-1">Ordre d'affichage</label>

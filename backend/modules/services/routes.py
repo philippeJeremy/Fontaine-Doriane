@@ -20,6 +20,8 @@ class ServiceBody(BaseModel):
     duration_minutes: int
     category: str = "Soin"
     image_url: Optional[str] = None
+    image_url_2: Optional[str] = None
+    image_url_3: Optional[str] = None
     sort_order: int = 0
 
 
@@ -30,6 +32,8 @@ class ServicePatch(BaseModel):
     duration_minutes: Optional[int] = None
     category: Optional[str] = None
     image_url: Optional[str] = None
+    image_url_2: Optional[str] = None
+    image_url_3: Optional[str] = None
     is_active: Optional[bool] = None
     sort_order: Optional[int] = None
 
@@ -43,6 +47,8 @@ def _to_dict(s: Service) -> dict:
         "duration_minutes": s.duration_minutes,
         "category": s.category,
         "image_url": s.image_url,
+        "image_url_2": s.image_url_2,
+        "image_url_3": s.image_url_3,
         "is_active": s.is_active,
         "sort_order": s.sort_order,
     }
