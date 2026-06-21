@@ -95,7 +95,7 @@ def register(request: Request, payload: RegisterInput, db: Session = Depends(get
 @limiter.limit("10/minute")
 def login(request: Request, payload: LoginInput, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email, User.is_active.is_(True)).first()
-    if not user or not verify_password(payload.password, user.hashed_password):
+    if not user or not user.hashed_password or not verify_password(payload.password, user.hashed_password):
         audit.warning("LOGIN_FAILED email=%s ip=%s", payload.email, request.client.host if request.client else "?")
         raise HTTPException(status_code=401, detail="Identifiants invalides")
 

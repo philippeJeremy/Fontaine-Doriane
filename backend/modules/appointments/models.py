@@ -12,6 +12,7 @@ class WorkingHours(Base):
     open_time = Column(Time)
     close_time = Column(Time)
     is_open = Column(Boolean, nullable=False, default=True)
+    address = Column(String(300))                               # adresse du jour (salon, domicile…)
 
 
 class ClosedDay(Base):
@@ -36,6 +37,9 @@ class Appointment(Base):
     total_price = Column(Numeric(8, 2), nullable=False)
     status = Column(String(50), nullable=False, default="pending")  # pending | confirmed | cancelled
     notes = Column(Text)
+    is_home_service = Column(Boolean, nullable=False, default=False)
+    client_address = Column(String(300))
+    home_service_surcharge = Column(Numeric(8, 2), nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
 
     client = relationship("User")

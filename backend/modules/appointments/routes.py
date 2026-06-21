@@ -11,6 +11,7 @@ from email_service import send_appointment_confirmation, send_appointment_notifi
 from modules.services.models import Service
 from modules.users.models import User
 
+from modules.settings.models import AppSettings
 from .models import Appointment, AppointmentService, ClosedDay, WorkingHours
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
@@ -28,6 +29,8 @@ class AppointmentCreate(BaseModel):
     start_time: str    # HH:MM
     services: List[ServiceItem]
     notes: Optional[str] = None
+    is_home_service: bool = False
+    client_address: Optional[str] = None
 
 
 def _appt_to_dict(a: Appointment, include_client: bool = False) -> dict:
@@ -39,6 +42,9 @@ def _appt_to_dict(a: Appointment, include_client: bool = False) -> dict:
         "total_price": float(a.total_price),
         "status": a.status,
         "notes": a.notes,
+        "is_home_service": a.is_home_service,
+        "client_address": a.client_address,
+        "home_service_surcharge": float(a.home_service_surcharge),
         "created_at": a.created_at.isoformat(),
         "services": [
             {
@@ -163,6 +169,18 @@ def create_appointment(
     total_duration = sum(s.duration_minutes * qty_map[s.id] for s in services)
     total_price = sum(float(s.price) * qty_map[s.id] for s in services)
 
+    # Supplément à domicile
+    surcharge = 0.0
+    if payload.is_home_service:
+        if not payload.client_address or not payload.client_address.strip():
+            raise HTTPException(status_code=422, detail="Adresse requise pour une prestation à domicile")
+        enabled_row = db.query(AppSettings).filter(AppSettings.key == "home_service_enabled").first()
+        if not enabled_row or enabled_row.value != "true":
+            raise HTTPException(status_code=400, detail="Les prestations à domicile ne sont pas disponibles")
+        surcharge_row = db.query(AppSettings).filter(AppSettings.key == "home_service_surcharge").first()
+        surcharge = float(surcharge_row.value) if surcharge_row else 0.0
+        total_price += surcharge
+
     start_dt = datetime.combine(appt_date, start)
     end_dt = start_dt + timedelta(minutes=total_duration)
 
@@ -187,6 +205,9 @@ def create_appointment(
         end_time=end_dt.time(),
         total_price=total_price,
         notes=payload.notes,
+        is_home_service=payload.is_home_service,
+        client_address=payload.client_address.strip() if payload.is_home_service and payload.client_address else None,
+        home_service_surcharge=surcharge,
     )
     db.add(appt)
     db.flush()

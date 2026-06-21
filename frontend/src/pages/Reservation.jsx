@@ -225,18 +225,23 @@ function StepServices({ cart, onCart }) {
 }
 
 // ── Étape 2 : sélection du créneau ───────────────────────────────────────────
-function StepSlot({ cart, selectedDate, selectedSlot, onDate, onSlot }) {
-  const [slots, setSlots] = useState([]);
+function StepSlot({
+  cart, selectedDate, selectedSlot, onDate, onSlot,
+  homeServiceEnabled, homeServiceSurcharge,
+  isHomeService, onHomeService, clientAddress, onClientAddress,
+}) {
+  const [slots, setSlots]               = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [closedDates, setClosedDates] = useState([]);
+  const [closedDates, setClosedDates]   = useState([]);
   const [closedWeekdays, setClosedWeekdays] = useState([]);
+  const [workingHours, setWorkingHours] = useState([]);
   const duration = cart.reduce((s, i) => s + i.duration_minutes, 0);
 
-  // Charger horaires + jours fermés une seule fois
   useEffect(() => {
-    api.get("/calendar/working-hours")
-      .then(rows => setClosedWeekdays(rows.filter(r => !r.is_open).map(r => r.day_of_week)))
-      .catch(() => {});
+    api.get("/calendar/working-hours").then(rows => {
+      setWorkingHours(rows);
+      setClosedWeekdays(rows.filter(r => !r.is_open).map(r => r.day_of_week));
+    }).catch(() => {});
     api.get("/calendar/closed-days")
       .then(rows => setClosedDates(rows.map(r => r.date)))
       .catch(() => {});
@@ -251,6 +256,14 @@ function StepSlot({ cart, selectedDate, selectedSlot, onDate, onSlot }) {
       .finally(() => setLoadingSlots(false));
   }, [selectedDate, duration]);
 
+  // Adresse du salon pour la date sélectionnée
+  const dayAddress = (() => {
+    if (!selectedDate) return null;
+    const dow = new Date(selectedDate + "T00:00:00").getDay();
+    const dowMon = (dow + 6) % 7;
+    return workingHours.find(r => r.day_of_week === dowMon)?.address ?? null;
+  })();
+
   return (
     <div className="flex gap-8 flex-col md:flex-row">
       <div>
@@ -263,7 +276,7 @@ function StepSlot({ cart, selectedDate, selectedSlot, onDate, onSlot }) {
         />
       </div>
 
-      <div className="flex-1">
+      <div className="flex-1 space-y-5">
         {!selectedDate && (
           <p className="text-stone-400 text-sm mt-8">← Sélectionnez une date</p>
         )}
@@ -280,6 +293,11 @@ function StepSlot({ cart, selectedDate, selectedSlot, onDate, onSlot }) {
             <p className="text-stone-600 text-sm mb-3">
               Créneaux disponibles le {new Date(selectedDate + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })} :
             </p>
+            {dayAddress && (
+              <p className="text-xs text-stone-400 mb-3 flex items-center gap-1">
+                <span>📍</span> {dayAddress}
+              </p>
+            )}
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {slots.map(slot => (
                 <button
@@ -297,29 +315,75 @@ function StepSlot({ cart, selectedDate, selectedSlot, onDate, onSlot }) {
             </div>
           </div>
         )}
+
+        {/* ── Lieu de la prestation ── */}
+        {selectedSlot && homeServiceEnabled && (
+          <div className="border border-stone-100 rounded-2xl p-4 bg-stone-50 space-y-3">
+            <p className="text-sm font-medium text-stone-700">Lieu de la prestation</p>
+            <div className="flex gap-2">
+              {[
+                { val: false, label: "🏪 Au salon" },
+                { val: true,  label: "🏠 À domicile" },
+              ].map(({ val, label }) => (
+                <button
+                  key={String(val)}
+                  onClick={() => onHomeService(val)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium border transition ${
+                    isHomeService === val
+                      ? "bg-sauge-500 text-white border-sauge-500"
+                      : "bg-white text-stone-600 border-stone-200 hover:border-sauge-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {isHomeService && (
+              <div>
+                <label className="block text-xs text-stone-500 mb-1">Votre adresse précise *</label>
+                <input
+                  type="text"
+                  value={clientAddress}
+                  onChange={e => onClientAddress(e.target.value)}
+                  placeholder="N° rue, code postal, ville…"
+                  className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sauge-300"
+                />
+                {homeServiceSurcharge > 0 && (
+                  <p className="text-xs text-stone-400 mt-1">
+                    Supplément déplacement : +{homeServiceSurcharge.toFixed(2)} €
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ── Étape 3 : confirmation ────────────────────────────────────────────────────
-function StepConfirm({ cart, selectedDate, selectedSlot, onSuccess }) {
-  const [notes, setNotes] = useState("");
+function StepConfirm({ cart, selectedDate, selectedSlot, isHomeService, clientAddress, homeServiceSurcharge, onSuccess }) {
+  const [notes, setNotes]   = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError]   = useState("");
 
-  const total    = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-  const duration = cart.reduce((s, i) => s + i.duration_minutes * i.quantity, 0);
+  const servicesTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const surcharge     = isHomeService ? (homeServiceSurcharge ?? 0) : 0;
+  const total         = servicesTotal + surcharge;
+  const duration      = cart.reduce((s, i) => s + i.duration_minutes * i.quantity, 0);
 
   async function submit() {
     setLoading(true);
     setError("");
     try {
       await api.post("/appointments", {
-        date: selectedDate,
-        start_time: selectedSlot,
-        services: cart.map(i => ({ id: i.id, quantity: i.quantity })),
-        notes: notes.trim() || null,
+        date:             selectedDate,
+        start_time:       selectedSlot,
+        services:         cart.map(i => ({ id: i.id, quantity: i.quantity })),
+        notes:            notes.trim() || null,
+        is_home_service:  isHomeService,
+        client_address:   isHomeService ? clientAddress : null,
       });
       onSuccess();
     } catch (e) {
@@ -348,6 +412,12 @@ function StepConfirm({ cart, selectedDate, selectedSlot, onSuccess }) {
           <span className="text-stone-500">Durée estimée</span>
           <span className="font-medium text-stone-800">{duration} min</span>
         </div>
+        {isHomeService && (
+          <div className="flex justify-between text-sm">
+            <span className="text-stone-500">📍 Adresse</span>
+            <span className="font-medium text-stone-800 text-right max-w-[60%]">{clientAddress}</span>
+          </div>
+        )}
         <div className="border-t border-sauge-200 pt-3">
           <p className="text-stone-500 text-sm mb-2">Prestations :</p>
           {cart.map(i => (
@@ -359,6 +429,12 @@ function StepConfirm({ cart, selectedDate, selectedSlot, onSuccess }) {
               <span className="text-sauge-600 shrink-0">{(i.price * i.quantity).toFixed(2)} €</span>
             </div>
           ))}
+          {surcharge > 0 && (
+            <div className="flex justify-between text-sm gap-2 mt-1">
+              <span className="text-stone-500">🏠 Supplément déplacement</span>
+              <span className="text-sauge-600 shrink-0">+{surcharge.toFixed(2)} €</span>
+            </div>
+          )}
         </div>
         <div className="flex justify-between font-bold text-stone-800 pt-1">
           <span>Total</span><span>{total.toFixed(2)} €</span>
@@ -406,6 +482,19 @@ export default function Reservation() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [success, setSuccess] = useState(false);
 
+  // Prestation à domicile
+  const [homeServiceEnabled, setHomeServiceEnabled]     = useState(false);
+  const [homeServiceSurcharge, setHomeServiceSurcharge] = useState(0);
+  const [isHomeService, setIsHomeService]               = useState(false);
+  const [clientAddress, setClientAddress]               = useState("");
+
+  useEffect(() => {
+    api.get("/settings/home-service").then(s => {
+      setHomeServiceEnabled(s.enabled);
+      setHomeServiceSurcharge(s.surcharge);
+    }).catch(() => {});
+  }, []);
+
   const preselectedId = searchParams.get("service");
 
   // Pré-sélectionner un service depuis l'URL
@@ -418,9 +507,10 @@ export default function Reservation() {
     }
   }, [preselectedId]);
 
+  const homeServiceValid = !isHomeService || clientAddress.trim().length > 0;
   const canNext = [
     cart.length > 0,
-    !!selectedDate && !!selectedSlot,
+    !!selectedDate && !!selectedSlot && homeServiceValid,
     true,
   ][step];
 
@@ -486,6 +576,12 @@ export default function Reservation() {
             selectedSlot={selectedSlot}
             onDate={setSelectedDate}
             onSlot={setSelectedSlot}
+            homeServiceEnabled={homeServiceEnabled}
+            homeServiceSurcharge={homeServiceSurcharge}
+            isHomeService={isHomeService}
+            onHomeService={setIsHomeService}
+            clientAddress={clientAddress}
+            onClientAddress={setClientAddress}
           />
         )}
         {step === 2 && (
@@ -493,6 +589,9 @@ export default function Reservation() {
             cart={cart}
             selectedDate={selectedDate}
             selectedSlot={selectedSlot}
+            isHomeService={isHomeService}
+            clientAddress={clientAddress}
+            homeServiceSurcharge={homeServiceSurcharge}
             onSuccess={() => setSuccess(true)}
           />
         )}

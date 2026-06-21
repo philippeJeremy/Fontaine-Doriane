@@ -61,6 +61,12 @@ export default function MonProfil() {
           <span className="text-stone-700">Total</span>
           <span className="text-sauge-600">{a.total_price.toFixed(2)} €</span>
         </div>
+        {a.is_home_service && (
+          <p className="text-xs text-sauge-600 mt-2">
+            🏠 Prestation à domicile
+            {a.client_address && <span className="text-stone-400"> — {a.client_address}</span>}
+          </p>
+        )}
         {a.notes && (
           <p className="text-stone-400 text-xs mt-2 italic">Note : {a.notes}</p>
         )}

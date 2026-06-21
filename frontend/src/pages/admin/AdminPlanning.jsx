@@ -410,7 +410,7 @@ export default function AdminPlanning() {
             return (
               <div
                 key={day}
-                className={`min-h-28 p-1.5 transition group ${
+                className={`min-h-32 p-1.5 transition group ${
                   isToday ? "bg-sauge-50/60" : isPast ? "bg-stone-50/20" : "hover:bg-sauge-50/20 cursor-pointer"
                 }`}
                 onClick={() => !isPast && (setCreateDate(dateStr), setShowCreate(true))}
@@ -427,22 +427,31 @@ export default function AdminPlanning() {
                   )}
                 </div>
 
-                {/* Badges rendez-vous */}
-                <div className="space-y-0.5">
-                  {dayAppts.slice(0, 3).map(a => (
+                {/* Cartes rendez-vous */}
+                <div className="space-y-1">
+                  {dayAppts.slice(0, 2).map(a => (
                     <div
                       key={a.id}
                       onClick={e => { e.stopPropagation(); setSelected(a); }}
-                      title={`${a.start_time} – ${clientName(a)} (${a.end_time})`}
-                      className={`text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80 transition ${STATUS[a.status]?.cls ?? "bg-stone-100 text-stone-500"}`}
+                      className={`text-xs px-1.5 py-1 rounded-md cursor-pointer hover:opacity-80 transition space-y-0.5 ${STATUS[a.status]?.cls ?? "bg-stone-100 text-stone-500"}`}
                     >
-                      {a.start_time} {clientName(a).split(" ")[0]}
+                      <p className="font-semibold leading-tight">
+                        {a.start_time} – {a.end_time}
+                        {a.is_home_service && <span className="ml-1">🏠</span>}
+                      </p>
+                      <p className="truncate leading-tight font-medium">{clientName(a)}</p>
+                      <p className="truncate leading-tight opacity-70">
+                        {a.services[0]?.name}{a.services.length > 1 ? ` +${a.services.length - 1}` : ""}
+                      </p>
+                      <p className="leading-tight opacity-70 font-medium">
+                        {Number(a.total_price).toFixed(2)} €
+                      </p>
                     </div>
                   ))}
-                  {dayAppts.length > 3 && (
+                  {dayAppts.length > 2 && (
                     <p className="text-xs text-stone-400 pl-1 cursor-pointer"
-                       onClick={e => { e.stopPropagation(); setSelected(dayAppts[3]); }}>
-                      +{dayAppts.length - 3} autre{dayAppts.length - 3 > 1 ? "s" : ""}
+                       onClick={e => { e.stopPropagation(); setSelected(dayAppts[2]); }}>
+                      +{dayAppts.length - 2} autre{dayAppts.length - 2 > 1 ? "s" : ""}
                     </p>
                   )}
                 </div>

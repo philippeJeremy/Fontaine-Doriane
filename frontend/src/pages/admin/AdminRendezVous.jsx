@@ -133,6 +133,15 @@ export default function AdminRendezVous() {
                       );
                     })}
                   </ul>
+                  {a.is_home_service && (
+                    <p className="text-xs text-sauge-600 mt-1 flex items-center gap-1">
+                      🏠 À domicile
+                      {a.client_address && <span className="text-stone-400">— {a.client_address}</span>}
+                      {a.home_service_surcharge > 0 && (
+                        <span className="text-stone-400">(+{Number(a.home_service_surcharge).toFixed(2)} €)</span>
+                      )}
+                    </p>
+                  )}
                   {a.notes && <p className="text-stone-400 text-xs mt-2 italic">Note : {a.notes}</p>}
                   {/* Total */}
                   <p className="text-sm font-bold text-stone-800 mt-2">

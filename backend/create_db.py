@@ -7,8 +7,10 @@ from modules.users import models as _users  # noqa
 from modules.services import models as _services  # noqa
 from modules.gallery import models as _gallery  # noqa
 from modules.appointments import models as _appointments  # noqa
+from modules.settings import models as _settings  # noqa
 
 from modules.appointments.models import WorkingHours
+from modules.settings.models import AppSettings
 from database import SessionLocal
 
 Base.metadata.create_all(bind=engine)
@@ -34,5 +36,16 @@ try:
         print("Horaires par défaut insérés (Lun-Sam 9h-19h/18h, Dim fermé).")
     else:
         print("Horaires déjà configurés.")
+
+    # Seed des paramètres globaux par défaut
+    defaults_settings = [
+        ("home_service_enabled",   "false"),
+        ("home_service_surcharge", "0"),
+    ]
+    for key, value in defaults_settings:
+        if not db.query(AppSettings).filter(AppSettings.key == key).first():
+            db.add(AppSettings(key=key, value=value))
+    db.commit()
+    print("Paramètres globaux initialisés.")
 finally:
     db.close()

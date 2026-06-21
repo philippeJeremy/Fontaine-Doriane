@@ -18,6 +18,7 @@ class WorkingHoursUpdate(BaseModel):
     is_open: bool
     open_time: Optional[str] = None   # "HH:MM"
     close_time: Optional[str] = None  # "HH:MM"
+    address: Optional[str] = None
 
 
 class ClosedDayCreate(BaseModel):
@@ -32,6 +33,7 @@ def _wh_to_dict(wh: WorkingHours) -> dict:
         "is_open": wh.is_open,
         "open_time": wh.open_time.strftime("%H:%M") if wh.open_time else None,
         "close_time": wh.close_time.strftime("%H:%M") if wh.close_time else None,
+        "address": wh.address,
     }
 
 
@@ -74,6 +76,7 @@ def update_working_hours(
             wh.close_time = _time(h_close, m_close)
         except (ValueError, AttributeError):
             raise HTTPException(status_code=422, detail="Format HH:MM requis")
+    wh.address = payload.address or None
 
     db.commit()
     db.refresh(wh)

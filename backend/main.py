@@ -14,7 +14,9 @@ from modules.appointments import routes as appointments
 from modules.calendar import routes as calendar
 from modules.gallery import routes as gallery
 from modules.services import routes as services
+from modules.settings import routes as settings
 from modules.uploads import routes as uploads
+from modules.users import oauth as oauth_users
 from modules.users import routes as users
 
 STATIC_DIR = "/app/static"
@@ -85,10 +87,12 @@ async def access_log(request: Request, call_next):
 
 
 app.include_router(users.router)
+app.include_router(oauth_users.router)
 app.include_router(services.router)
 app.include_router(gallery.router)
 app.include_router(appointments.router)
 app.include_router(calendar.router)
+app.include_router(settings.router)
 app.include_router(uploads.router)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
