@@ -52,7 +52,7 @@ def _set_cookie(response: RedirectResponse, token: str) -> None:
         secure=True,
         samesite="lax",
         max_age=REFRESH_MAX_AGE,
-        path="/auth",
+        path="/api/auth",
     )
 
 

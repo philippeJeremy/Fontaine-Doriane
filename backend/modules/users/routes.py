@@ -64,9 +64,9 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         value=token,
         httponly=True,
         secure=True,
-        samesite="strict",
+        samesite="lax",
         max_age=REFRESH_MAX_AGE,
-        path="/auth",
+        path="/api/auth",
     )
 
 
@@ -157,7 +157,7 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie("refresh_token", path="/auth")
+    response.delete_cookie("refresh_token", path="/api/auth")
     return {"detail": "Déconnecté"}
 
 
@@ -227,7 +227,7 @@ def delete_my_account(
         db.delete(appt)  # cascade supprime les AppointmentService liés
     db.delete(user)
     db.commit()
-    response.delete_cookie("refresh_token", path="/auth")
+    response.delete_cookie("refresh_token", path="/api/auth")
     audit.info("ACCOUNT_DELETED user_id=%s", user.id)
 
 
