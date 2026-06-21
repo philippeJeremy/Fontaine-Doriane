@@ -42,7 +42,7 @@ export default function Galerie() {
               <img
                 src={p.url}
                 alt={p.caption ?? ""}
-                className="w-full object-cover group-hover:scale-105 transition duration-500"
+                className="w-full object-contain group-hover:scale-105 transition duration-500"
                 loading="lazy"
               />
               {p.caption && (

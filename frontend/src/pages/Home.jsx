@@ -6,7 +6,7 @@ function ServiceCard({ service }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-sauge-50 overflow-hidden hover:shadow-md transition">
       {service.image_url ? (
-        <img src={service.image_url} alt={service.name} className="w-full h-44 object-cover" />
+        <img src={service.image_url} alt={service.name} className="w-full h-44 object-contain bg-stone-50" />
       ) : (
         <div className="w-full h-44 bg-gradient-to-br from-sauge-100 to-sauge-50 flex items-center justify-center text-4xl">
           💅
@@ -31,11 +31,11 @@ function GalleryPreview({ photos }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {photos.slice(0, 6).map((p) => (
-        <div key={p.id} className="relative group overflow-hidden rounded-xl aspect-square">
+        <div key={p.id} className="relative group overflow-hidden rounded-xl bg-stone-100">
           <img
             src={p.url}
             alt={p.caption ?? ""}
-            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+            className="w-full h-full object-contain group-hover:scale-105 transition duration-500"
           />
           {p.caption && (
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-end p-3">
