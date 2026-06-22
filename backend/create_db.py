@@ -42,6 +42,7 @@ try:
     defaults_settings = [
         ("home_service_enabled",   "false"),
         ("home_service_surcharge", "0"),
+        ("vat_exempt",             "true"),
     ]
     for key, value in defaults_settings:
         if not db.query(AppSettings).filter(AppSettings.key == key).first():

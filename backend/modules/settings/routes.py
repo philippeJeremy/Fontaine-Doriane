@@ -11,6 +11,7 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 
 KEY_ENABLED    = "home_service_enabled"
 KEY_SURCHARGE  = "home_service_surcharge"
+KEY_VAT_EXEMPT = "vat_exempt"
 
 
 def _get(db: Session, key: str, default: str = "") -> str:
@@ -53,3 +54,24 @@ def update_home_service(
     _set(db, KEY_SURCHARGE, str(round(payload.surcharge, 2)))
     db.commit()
     return {"enabled": payload.enabled, "surcharge": payload.surcharge}
+
+
+@router.get("/vat")
+def get_vat_settings(db: Session = Depends(get_db)):
+    return {"vat_exempt": _get(db, KEY_VAT_EXEMPT, "true") == "true"}
+
+
+class VatUpdate(BaseModel):
+    vat_exempt: bool
+
+
+@router.put("/vat")
+def update_vat_settings(
+    payload: VatUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    require_admin(request, db)
+    _set(db, KEY_VAT_EXEMPT, "true" if payload.vat_exempt else "false")
+    db.commit()
+    return {"vat_exempt": payload.vat_exempt}

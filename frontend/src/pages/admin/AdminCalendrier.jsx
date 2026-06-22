@@ -19,6 +19,11 @@ export default function AdminCalendrier() {
   const [savingHome, setSavingHome]       = useState(false);
   const [homeOk, setHomeOk]              = useState(false);
 
+  // Régime TVA
+  const [vatExempt, setVatExempt]   = useState(true);
+  const [savingVat, setSavingVat]   = useState(false);
+  const [vatOk, setVatOk]           = useState(false);
+
   useEffect(() => {
     api.get("/calendar/working-hours").then(setHours).catch(() => {});
     api.get("/calendar/closed-days").then(setClosedDays).catch(() => {});
@@ -26,6 +31,7 @@ export default function AdminCalendrier() {
       setHomeEnabled(s.enabled);
       setHomeSurcharge(String(s.surcharge));
     }).catch(() => {});
+    api.get("/settings/vat").then(s => setVatExempt(s.vat_exempt)).catch(() => {});
   }, []);
 
   // Sauvegarde horaires (toggle + heures → immédiat ; adresse → onBlur)
@@ -52,6 +58,20 @@ export default function AdminCalendrier() {
   // Mise à jour locale de l'adresse (sans appel API)
   function setAddress(index, value) {
     setHours(prev => prev.map((h, i) => i === index ? { ...h, address: value } : h));
+  }
+
+  async function saveVat() {
+    setSavingVat(true);
+    setVatOk(false);
+    try {
+      await api.put("/settings/vat", { vat_exempt: vatExempt });
+      setVatOk(true);
+      setTimeout(() => setVatOk(false), 2000);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setSavingVat(false);
+    }
   }
 
   async function saveHomeService() {
@@ -235,6 +255,56 @@ export default function AdminCalendrier() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* ── Régime TVA ── */}
+      <section className="bg-white rounded-2xl border border-sauge-100 shadow-sm p-6">
+        <h2 className="font-semibold text-stone-800 mb-1">Régime TVA</h2>
+        <p className="text-stone-400 text-xs mb-5">
+          En micro-entreprise sous le seuil de franchise en base (37&nbsp;500&nbsp;€ de CA),
+          la TVA n'est pas facturée. Activez la TVA uniquement si vous avez dépassé ce seuil.
+        </p>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setVatExempt(v => !v)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition shrink-0 ${
+                vatExempt ? "bg-stone-200" : "bg-sauge-500"
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                vatExempt ? "translate-x-1" : "translate-x-6"
+              }`} />
+            </button>
+            <span className="text-sm text-stone-700">
+              {vatExempt ? "TVA non applicable (franchise en base)" : "Assujettie à la TVA"}
+            </span>
+          </div>
+
+          {vatExempt ? (
+            <p className="text-xs text-stone-400 bg-stone-50 rounded-xl px-4 py-3">
+              Vos factures afficheront la mention légale obligatoire :<br />
+              <em>« TVA non applicable, article 293 B du CGI »</em>
+            </p>
+          ) : (
+            <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-4 py-3">
+              Le taux de TVA (20 % par défaut) sera applicable sur chaque facture et pourra être
+              ajusté lors de la création.
+            </p>
+          )}
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              onClick={saveVat}
+              disabled={savingVat}
+              className="bg-sauge-500 hover:bg-sauge-600 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-full transition"
+            >
+              {savingVat ? "Enregistrement…" : "Enregistrer"}
+            </button>
+            {vatOk && <span className="text-green-500 text-sm">✓ Sauvegardé</span>}
+          </div>
+        </div>
       </section>
 
       {/* ── Prestations à domicile ── */}

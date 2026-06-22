@@ -11,6 +11,7 @@ from database import get_db
 from dependencies import require_admin
 from email_service import RESEND_API_KEY, RESEND_FROM
 from modules.appointments.models import Appointment
+from modules.settings.models import AppSettings
 from modules.users.models import User  # noqa – needed for relationship load
 
 from .models import Invoice
@@ -117,6 +118,17 @@ def _build_pdf_data(inv: Invoice) -> dict:
 
 
 def _invoice_email_html(inv: Invoice) -> str:
+    vat_exempt = float(inv.vat_rate) == 0
+    if vat_exempt:
+        vat_row = (
+            '<tr><td style="padding:8px 12px;font-weight:600">TVA</td>'
+            '<td style="padding:8px 12px"><em>Non applicable — art. 293 B du CGI</em></td></tr>'
+        )
+    else:
+        vat_row = (
+            f'<tr><td style="padding:8px 12px;font-weight:600">TVA ({float(inv.vat_rate):.0f}%)</td>'
+            f'<td style="padding:8px 12px">{float(inv.amount_vat):.2f}&nbsp;€</td></tr>'
+        )
     return f"""
     <div style="font-family:sans-serif;max-width:560px;margin:auto;color:#1c1917">
       <h2 style="color:#4a552f">{BUSINESS_NAME}</h2>
@@ -131,8 +143,7 @@ def _invoice_email_html(inv: Invoice) -> str:
             <td style="padding:8px 12px">{inv.invoice_date.strftime('%d/%m/%Y')}</td></tr>
         <tr><td style="padding:8px 12px;font-weight:600">Montant HT</td>
             <td style="padding:8px 12px">{float(inv.amount_ht):.2f}&nbsp;€</td></tr>
-        <tr><td style="padding:8px 12px;font-weight:600">TVA ({float(inv.vat_rate):.0f}%)</td>
-            <td style="padding:8px 12px">{float(inv.amount_vat):.2f}&nbsp;€</td></tr>
+        {vat_row}
         <tr style="background:#4a552f;color:white">
             <td style="padding:8px 12px;font-weight:700">Total TTC</td>
             <td style="padding:8px 12px;font-weight:700">{float(inv.amount_ttc):.2f}&nbsp;€</td></tr>
@@ -213,13 +224,21 @@ def create_from_appointment(
     client_name = _client_name(appt)
     client_email = appt.client.email if appt.client else None
 
+    vat_exempt_row = db.query(AppSettings).filter(AppSettings.key == "vat_exempt").first()
+    vat_exempt = (vat_exempt_row.value == "true") if vat_exempt_row else True
+
     amount_ttc = float(appt.total_price)
-    vat_rate = float(payload.vat_rate)
-    if vat_rate > 0:
-        amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2)
-    else:
+    if vat_exempt:
+        vat_rate = 0.0
         amount_ht = amount_ttc
-    amount_vat = round(amount_ttc - amount_ht, 2)
+        amount_vat = 0.0
+    else:
+        vat_rate = float(payload.vat_rate)
+        if vat_rate > 0:
+            amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2)
+        else:
+            amount_ht = amount_ttc
+        amount_vat = round(amount_ttc - amount_ht, 2)
 
     today = date.today()
     invoice_number = _next_invoice_number(db, today.year)

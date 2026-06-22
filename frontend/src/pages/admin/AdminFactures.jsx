@@ -30,8 +30,16 @@ export default function AdminFactures() {
   const [saving, setSaving]             = useState(false);
   const [modalError, setModalError]     = useState("");
 
+  // Régime TVA (chargé au montage)
+  const [vatExempt, setVatExempt]       = useState(true);
+
   // Actions
   const [actionId, setActionId]         = useState(null);
+
+  // ── Chargement initial ──────────────────────────────────────────────────────
+  useEffect(() => {
+    api.get("/settings/vat").then(s => setVatExempt(s.vat_exempt)).catch(() => {});
+  }, []);
 
   // ── Chargement des factures ─────────────────────────────────────────────────
   useEffect(() => {
@@ -63,7 +71,7 @@ export default function AdminFactures() {
   // ── Ouvrir la modal de création ─────────────────────────────────────────────
   async function openCreate() {
     setModalError("");
-    setVatRate("20");
+    setVatRate(vatExempt ? "0" : "20");
     setNotes("");
     const appts = await api.get("/invoices/appointable").catch(() => []);
     setAppointable(appts);
@@ -328,26 +336,37 @@ export default function AdminFactures() {
 
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1">
-                  Taux TVA (%)
-                </label>
-                <input
-                  type="number" min="0" max="100" step="0.1"
-                  value={vatRate}
-                  onChange={e => setVatRate(e.target.value)}
-                  className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sauge-300"
-                />
-                <p className="text-xs text-stone-400 mt-1">0 si TVA non applicable</p>
+                {vatExempt ? (
+                  <div className="bg-stone-50 rounded-xl px-3 py-2 text-xs text-stone-500">
+                    <p className="font-medium text-stone-600 mb-0.5">Régime micro-entrepreneur</p>
+                    TVA non applicable — art. 293 B du CGI
+                  </div>
+                ) : (
+                  <>
+                    <label className="block text-xs font-medium text-stone-600 mb-1">
+                      Taux TVA (%)
+                    </label>
+                    <input
+                      type="number" min="0" max="100" step="0.1"
+                      value={vatRate}
+                      onChange={e => setVatRate(e.target.value)}
+                      className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sauge-300"
+                    />
+                  </>
+                )}
               </div>
               {selectedAppt && appointable.find(a => String(a.id) === selectedAppt) && (() => {
                 const a = appointable.find(x => String(x.id) === selectedAppt);
                 const ttc = a.total_price;
-                const rate = parseFloat(vatRate) || 0;
+                const rate = vatExempt ? 0 : (parseFloat(vatRate) || 0);
                 const ht = rate > 0 ? (ttc / (1 + rate / 100)) : ttc;
                 return (
                   <div className="bg-stone-50 rounded-xl p-3 text-xs space-y-0.5">
                     <p className="text-stone-500">HT : <span className="font-semibold text-stone-700">{ht.toFixed(2)} €</span></p>
-                    <p className="text-stone-500">TVA : <span className="font-semibold text-stone-700">{(ttc - ht).toFixed(2)} €</span></p>
+                    {vatExempt
+                      ? <p className="text-stone-400 italic">TVA non applicable</p>
+                      : <p className="text-stone-500">TVA : <span className="font-semibold text-stone-700">{(ttc - ht).toFixed(2)} €</span></p>
+                    }
                     <p className="text-stone-800 font-semibold">TTC : {ttc.toFixed(2)} €</p>
                   </div>
                 );

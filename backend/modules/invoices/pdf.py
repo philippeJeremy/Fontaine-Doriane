@@ -149,7 +149,7 @@ def generate_invoice_pdf(data: dict) -> bytes:
 
     total_row("Montant HT :", float(data["amount_ht"]))
     vat_rate = float(data["vat_rate"])
-    label_tva = "TVA (non applicable)" if vat_rate == 0 else f"TVA ({vat_rate:.0f}%) :"
+    label_tva = "TVA non applicable :" if vat_rate == 0 else f"TVA ({vat_rate:.0f}%) :"
     total_row(label_tva, float(data["amount_vat"]))
 
     pdf.set_draw_color(*_SAUGE)
@@ -159,6 +159,14 @@ def generate_invoice_pdf(data: dict) -> bytes:
     pdf.ln(1)
 
     total_row("TOTAL TTC :", float(data["amount_ttc"]), bold=True, color=_SAUGE)
+
+    # ── Mention légale TVA franchise ─────────────────────────────────────────────
+    if vat_rate == 0:
+        pdf.ln(3)
+        pdf.set_x(20)
+        pdf.set_font("DJ", "", 7)
+        pdf.set_text_color(*_GRAY)
+        pdf.cell(170, 4, "TVA non applicable, article 293 B du CGI", ln=True)
 
     # ── Notes ─────────────────────────────────────────────────────────────────────
     if data.get("notes"):
