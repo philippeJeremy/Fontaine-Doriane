@@ -6,15 +6,27 @@ from fpdf import FPDF
 _SAUGE = (74, 85, 47)
 _GRAY = (120, 120, 120)
 
+# Polices DejaVu installées via fonts-dejavu-core (apt)
+_FONT_DIR = "/usr/share/fonts/truetype/dejavu"
+_FONT_REG  = f"{_FONT_DIR}/DejaVuSans.ttf"
+_FONT_BOLD = f"{_FONT_DIR}/DejaVuSans-Bold.ttf"
+
 
 def _biz() -> dict:
     return {
-        "name": os.getenv("BUSINESS_NAME", "Les Ongles de Doriane"),
+        "name":    os.getenv("BUSINESS_NAME",    "Les Ongles de Doriane"),
         "address": os.getenv("BUSINESS_ADDRESS", ""),
-        "phone": os.getenv("BUSINESS_PHONE", ""),
-        "email": os.getenv("BUSINESS_EMAIL", ""),
-        "siret": os.getenv("BUSINESS_SIRET", ""),
+        "phone":   os.getenv("BUSINESS_PHONE",   ""),
+        "email":   os.getenv("BUSINESS_EMAIL",   ""),
+        "siret":   os.getenv("BUSINESS_SIRET",   ""),
     }
+
+
+def _make_pdf() -> FPDF:
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf.add_font("DJ",  "",  _FONT_REG,  uni=True)
+    pdf.add_font("DJ",  "B", _FONT_BOLD, uni=True)
+    return pdf
 
 
 def generate_invoice_pdf(data: dict) -> bytes:
@@ -26,17 +38,17 @@ def generate_invoice_pdf(data: dict) -> bytes:
     """
     biz = _biz()
 
-    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf = _make_pdf()
     pdf.add_page()
     pdf.set_margins(20, 20, 20)
     pdf.set_auto_page_break(auto=True, margin=25)
 
     # ── En-tête entreprise ────────────────────────────────────────────────────────
-    pdf.set_font("Helvetica", "B", 20)
+    pdf.set_font("DJ", "B", 20)
     pdf.set_text_color(*_SAUGE)
     pdf.cell(170, 10, biz["name"], ln=True)
 
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font("DJ", "", 9)
     pdf.set_text_color(*_GRAY)
     for line in filter(None, [biz["address"], biz["phone"], biz["email"]]):
         pdf.cell(170, 4, line, ln=True)
@@ -53,33 +65,33 @@ def generate_invoice_pdf(data: dict) -> bytes:
     y0 = pdf.get_y()
 
     pdf.set_xy(20, y0)
-    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_font("DJ", "B", 8)
     pdf.set_text_color(*_GRAY)
     pdf.cell(85, 5, "FACTURE POUR")
 
     pdf.set_xy(20, y0 + 7)
-    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_font("DJ", "B", 13)
     pdf.set_text_color(30, 30, 30)
     pdf.cell(85, 7, data["client_name"])
 
     if data.get("client_email"):
         pdf.set_xy(20, y0 + 15)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font("DJ", "", 9)
         pdf.set_text_color(*_GRAY)
         pdf.cell(85, 5, data["client_email"])
 
     pdf.set_xy(115, y0)
-    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_font("DJ", "B", 8)
     pdf.set_text_color(*_GRAY)
     pdf.cell(75, 5, "N° DE FACTURE", align="R")
 
     pdf.set_xy(115, y0 + 7)
-    pdf.set_font("Helvetica", "B", 14)
+    pdf.set_font("DJ", "B", 14)
     pdf.set_text_color(*_SAUGE)
     pdf.cell(75, 7, data["invoice_number"], align="R")
 
     pdf.set_xy(115, y0 + 16)
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font("DJ", "", 9)
     pdf.set_text_color(60, 60, 60)
     pdf.cell(75, 5, f"Date : {data['invoice_date']}", align="R")
 
@@ -95,26 +107,23 @@ def generate_invoice_pdf(data: dict) -> bytes:
 
     pdf.set_fill_color(*_SAUGE)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_font("DJ", "B", 9)
     pdf.set_x(20)
     pdf.cell(COL[0], 8, "  DÉSIGNATION", fill=True, border=0, ln=False)
-    pdf.cell(COL[1], 8, "QTÉ", fill=True, border=0, align="C", ln=False)
-    pdf.cell(COL[2], 8, "P.U. TTC", fill=True, border=0, align="R", ln=False)
-    pdf.cell(COL[3], 8, "TOTAL TTC", fill=True, border=0, align="R", ln=True)
+    pdf.cell(COL[1], 8, "QTÉ",           fill=True, border=0, align="C", ln=False)
+    pdf.cell(COL[2], 8, "P.U. TTC",      fill=True, border=0, align="R", ln=False)
+    pdf.cell(COL[3], 8, "TOTAL TTC",     fill=True, border=0, align="R", ln=True)
 
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font("DJ", "", 9)
     for i, svc in enumerate(data["services"]):
-        if i % 2 == 0:
-            pdf.set_fill_color(248, 248, 244)
-        else:
-            pdf.set_fill_color(255, 255, 255)
+        pdf.set_fill_color(248, 248, 244) if i % 2 == 0 else pdf.set_fill_color(255, 255, 255)
         pdf.set_text_color(40, 40, 40)
         line_total = svc["price_ttc"] * svc["quantity"]
         pdf.set_x(20)
-        pdf.cell(COL[0], 7, f"  {svc['name']}", fill=True, border=0, ln=False)
-        pdf.cell(COL[1], 7, str(svc["quantity"]), fill=True, border=0, align="C", ln=False)
-        pdf.cell(COL[2], 7, f"{svc['price_ttc']:.2f} €", fill=True, border=0, align="R", ln=False)
-        pdf.cell(COL[3], 7, f"{line_total:.2f} €", fill=True, border=0, align="R", ln=True)
+        pdf.cell(COL[0], 7, f"  {svc['name']}",               fill=True, border=0, ln=False)
+        pdf.cell(COL[1], 7, str(svc["quantity"]),              fill=True, border=0, align="C", ln=False)
+        pdf.cell(COL[2], 7, f"{svc['price_ttc']:.2f} €",      fill=True, border=0, align="R", ln=False)
+        pdf.cell(COL[3], 7, f"{line_total:.2f} €",            fill=True, border=0, align="R", ln=True)
 
     surcharge = float(data.get("home_service_surcharge", 0))
     if surcharge > 0:
@@ -123,7 +132,7 @@ def generate_invoice_pdf(data: dict) -> bytes:
         pdf.set_text_color(40, 40, 40)
         pdf.set_x(20)
         pdf.cell(COL[0], 7, "  Supplément déplacement à domicile", fill=True, border=0, ln=False)
-        pdf.cell(COL[1], 7, "1", fill=True, border=0, align="C", ln=False)
+        pdf.cell(COL[1], 7, "1",                fill=True, border=0, align="C", ln=False)
         pdf.cell(COL[2], 7, f"{surcharge:.2f} €", fill=True, border=0, align="R", ln=False)
         pdf.cell(COL[3], 7, f"{surcharge:.2f} €", fill=True, border=0, align="R", ln=True)
 
@@ -132,7 +141,7 @@ def generate_invoice_pdf(data: dict) -> bytes:
     # ── Totaux (alignés à droite) ─────────────────────────────────────────────────
     def total_row(label: str, value: float, bold: bool = False, color=None) -> None:
         c = color or (50, 50, 50)
-        pdf.set_font("Helvetica", "B" if bold else "", 10 if bold else 9)
+        pdf.set_font("DJ", "B" if bold else "", 10 if bold else 9)
         pdf.set_text_color(*c)
         pdf.set_x(115)
         pdf.cell(45, 7, label, ln=False)
@@ -155,11 +164,11 @@ def generate_invoice_pdf(data: dict) -> bytes:
     if data.get("notes"):
         pdf.ln(8)
         pdf.set_x(20)
-        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_font("DJ", "B", 9)
         pdf.set_text_color(*_GRAY)
         pdf.cell(170, 5, "Notes :", ln=True)
         pdf.set_x(20)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font("DJ", "", 9)
         pdf.set_text_color(60, 60, 60)
         pdf.multi_cell(170, 5, data["notes"])
 
@@ -169,7 +178,7 @@ def generate_invoice_pdf(data: dict) -> bytes:
     pdf.set_line_width(0.3)
     pdf.line(20, pdf.get_y(), 190, pdf.get_y())
     pdf.ln(3)
-    pdf.set_font("Helvetica", "", 7)
+    pdf.set_font("DJ", "", 7)
     pdf.set_text_color(170, 170, 170)
     today = _date.today().strftime("%d/%m/%Y")
     pdf.cell(170, 4, f"Document généré le {today} — {biz['name']}", align="C", ln=True)
