@@ -137,6 +137,14 @@ export default function Login() {
             >
               {loading ? "Connexion…" : "Se connecter"}
             </button>
+            <p className="text-center">
+              <Link
+                to="/mot-de-passe-oublie"
+                className="text-stone-400 hover:text-sauge-500 text-xs transition"
+              >
+                Mot de passe oublié ?
+              </Link>
+            </p>
           </form>
         </div>
         <p className="text-center text-stone-500 text-sm mt-6">

@@ -56,6 +56,29 @@ def send_appointment_confirmation(
     _send(to_email, "Confirmation de rendez-vous — Fontaine Doriane", html)
 
 
+def send_password_reset(to_email: str, client_name: str, reset_url: str) -> None:
+    html = f"""
+    <div style="font-family:sans-serif;max-width:560px;margin:auto;color:#1c1917">
+      <h2 style="color:#4a552f">Réinitialisation de mot de passe</h2>
+      <p>Bonjour {client_name},</p>
+      <p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le lien ci-dessous —
+         il est valable <strong>1 heure</strong>.</p>
+      <p style="margin:24px 0">
+        <a href="{reset_url}"
+           style="background:#4a552f;color:white;padding:12px 28px;border-radius:999px;text-decoration:none;font-weight:600">
+          Réinitialiser mon mot de passe
+        </a>
+      </p>
+      <p style="color:#78716c;font-size:.9em">
+        Si vous n'avez pas fait cette demande, ignorez cet email — votre mot de passe reste inchangé.
+      </p>
+      <hr style="border:none;border-top:1px solid #e7e5e4;margin:24px 0"/>
+      <p>Fontaine Doriane</p>
+    </div>
+    """
+    _send(to_email, "Réinitialisation de votre mot de passe — Fontaine Doriane", html)
+
+
 def send_appointment_notification(
     client_name: str,
     client_email: str,

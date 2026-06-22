@@ -21,6 +21,9 @@ import AdminGalerie from "./pages/admin/AdminGalerie";
 import AdminCalendrier from "./pages/admin/AdminCalendrier";
 import AdminPlanning from "./pages/admin/AdminPlanning";
 import AdminFactures from "./pages/admin/AdminFactures";
+import AdminUtilisateurs from "./pages/admin/AdminUtilisateurs";
+import MotDePasseOublie from "./pages/MotDePasseOublie";
+import ReinitialiserMdp from "./pages/ReinitialiserMdp";
 
 // ── Garde : authentification requise ─────────────────────────────────────────
 function PrivateRoute({ children }) {
@@ -79,6 +82,8 @@ export default function App() {
             />
             <Route path="/mentions-legales" element={<MentionsLegales />} />
             <Route path="/confidentialite" element={<Confidentialite />} />
+            <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+            <Route path="/reinitialiser-mdp" element={<ReinitialiserMdp />} />
           </Route>
 
           {/* ── Pages admin (avec sidebar) ── */}
@@ -94,6 +99,7 @@ export default function App() {
             <Route path="rendez-vous" element={<AdminRendezVous />} />
             <Route path="planning" element={<AdminPlanning />} />
             <Route path="factures" element={<AdminFactures />} />
+            <Route path="utilisateurs" element={<AdminUtilisateurs />} />
             <Route path="prestations" element={<AdminPrestations />} />
             <Route path="galerie" element={<AdminGalerie />} />
             <Route path="calendrier" element={<AdminCalendrier />} />

@@ -44,3 +44,23 @@ def create_refresh_token(user_id: int) -> tuple[str, str, datetime]:
 
 def decode_refresh_token(token: str) -> dict:
     return jwt.decode(token, REFRESH_SECRET_KEY, algorithms=[ALGORITHM])
+
+
+RESET_TOKEN_EXPIRE_MINUTES = 60
+
+
+def create_reset_token(user_id: int, hashed_password: str) -> str:
+    """Token 1h — s'invalide automatiquement si le mot de passe change."""
+    import hashlib
+    fp = hashlib.sha256(hashed_password.encode()).hexdigest()[:16]
+    exp = datetime.utcnow() + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
+    payload = {"sub": str(user_id), "type": "pwd_reset", "fp": fp, "exp": exp}
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def verify_reset_token(token: str) -> tuple[int, str]:
+    """Retourne (user_id, fingerprint) ou lève JWTError."""
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    if payload.get("type") != "pwd_reset":
+        raise JWTError("Type de token invalide")
+    return int(payload["sub"]), payload["fp"]

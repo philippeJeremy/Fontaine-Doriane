@@ -1,6 +1,6 @@
 # Les Ongles de Doriane — Application Web
 
-Site de réservation en ligne pour un salon de nail art. Inclut un espace client (réservation, profil), un back-office administrateur complet, et une gestion de factures avec envoi par email.
+Site de réservation en ligne pour un salon de nail art. Inclut un espace client (réservation, profil, réinitialisation de mot de passe), un back-office administrateur complet (planning, rendez-vous, factures, gestion des utilisateurs) et une gestion de factures avec envoi par email.
 
 ---
 
@@ -17,7 +17,7 @@ Site de réservation en ligne pour un salon de nail art. Inclut un espace client
 9. [API backend — endpoints](#api-backend--endpoints)
 10. [Connexion sociale (OAuth)](#connexion-sociale-oauth)
 11. [Emails transactionnels (Resend)](#emails-transactionnels-resend)
-12. [Factures — configuration PDF](#factures--configuration-pdf)
+12. [Factures — configuration PDF et TVA](#factures--configuration-pdf-et-tva)
 13. [Sauvegardes et restauration](#sauvegardes-et-restauration)
 14. [Mode développement local](#mode-développement-local)
 15. [Déploiement en production](#déploiement-en-production)
@@ -114,11 +114,18 @@ ADMIN_EMAIL=doriane@votre-domaine.fr
 
 
 # ───────────────────────────────────────────────
-# Connexion sociale OAuth (optionnel)
+# URL du frontend
 # ───────────────────────────────────────────────
 
-# URL du frontend (utilisée pour les redirections OAuth)
+# Utilisée pour :
+#   - Les redirections OAuth (Google, Facebook)
+#   - Les liens dans les emails de réinitialisation de mot de passe
 FRONTEND_URL=https://votre-domaine.fr
+
+
+# ───────────────────────────────────────────────
+# Connexion sociale OAuth (optionnel)
+# ───────────────────────────────────────────────
 
 # Google OAuth 2.0 (Google Cloud Console > Identifiants)
 GOOGLE_CLIENT_ID=xxxxxxxxxx.apps.googleusercontent.com
@@ -158,7 +165,7 @@ LOG_DIR=/app/logs
 | `POSTGRES_PASSWORD` | Mot de passe PostgreSQL |
 | `POSTGRES_DB` | Nom de la base de données |
 | `DATABASE_URL` | URL de connexion SQLAlchemy |
-| `SECRET_KEY` | Signature des access tokens JWT |
+| `SECRET_KEY` | Signature des access tokens JWT + tokens de réinitialisation de mot de passe |
 | `REFRESH_SECRET_KEY` | Signature des refresh tokens JWT |
 | `CORS_ORIGINS` | Origines autorisées pour les requêtes cross-origin |
 
@@ -166,10 +173,10 @@ LOG_DIR=/app/logs
 
 | Variable | Rôle |
 |----------|------|
-| `RESEND_API_KEY` | Envoi d'emails (confirmations RDV, factures) |
+| `RESEND_API_KEY` | Envoi d'emails (confirmations RDV, factures, reset mot de passe) |
 | `RESEND_FROM` | Adresse expéditeur des emails |
 | `ADMIN_EMAIL` | Reçoit la notification à chaque nouveau RDV |
-| `FRONTEND_URL` | Indispensable pour OAuth (redirections après login social) |
+| `FRONTEND_URL` | Indispensable pour OAuth et pour les liens dans les emails de reset |
 | `BUSINESS_NAME` | Nom sur les factures PDF (défaut : "Les Ongles de Doriane") |
 
 ---
@@ -196,7 +203,7 @@ docker compose logs backend --tail 30
 Au premier démarrage, le backend exécute automatiquement `create_db.py` qui :
 - Crée toutes les tables (si elles n'existent pas)
 - Insère les horaires par défaut (lundi–samedi 9h–19h/18h, dimanche fermé)
-- Insère les paramètres globaux par défaut
+- Insère les paramètres globaux par défaut (`home_service_enabled=false`, `home_service_surcharge=0`, `vat_exempt=true`)
 
 ---
 
@@ -251,6 +258,8 @@ Le script demande interactivement : email, prénom, nom, téléphone (optionnel)
 | `/connexion` | Connexion (email/mot de passe + Google + Facebook) |
 | `/inscription` | Création de compte |
 | `/profil` | Espace client : mes rendez-vous, modifier mes infos |
+| `/mot-de-passe-oublie` | Formulaire de réinitialisation de mot de passe (envoi par email) |
+| `/reinitialiser-mdp?token=…` | Formulaire de nouveau mot de passe (lien reçu par email, valable 1h) |
 | `/mentions-legales` | Mentions légales |
 | `/confidentialite` | Politique de confidentialité |
 
@@ -264,10 +273,11 @@ Accessible sur `/admin` — rôle `admin` requis.
 |-----|------|-------------|
 | `/admin/planning` | Planning | Vue calendrier mensuelle des RDV avec détails (heure, client, prestation, prix) |
 | `/admin/rendez-vous` | Rendez-vous | Liste complète, confirmation, annulation, création manuelle |
-| `/admin/factures` | Factures | Gestion des factures (créer, valider, envoyer, encaisser) |
+| `/admin/factures` | Factures | Gestion des factures (créer, valider, envoyer, encaisser, télécharger PDF) |
+| `/admin/utilisateurs` | Utilisateurs | Liste des comptes clients, bannir/réactiver, réinitialiser MDP, supprimer |
 | `/admin/prestations` | Prestations | CRUD des prestations (nom, catégorie, prix, durée, jusqu'à 3 photos) |
 | `/admin/galerie` | Galerie | Gestion des photos de la galerie (upload, légende, réordonnancement) |
-| `/admin/calendrier` | Calendrier | Configuration des horaires hebdomadaires, jours fermés, adresse par jour, prestation à domicile |
+| `/admin/calendrier` | Calendrier | Horaires hebdomadaires, jours fermés, adresse par jour, prestation à domicile, régime TVA |
 
 ---
 
@@ -284,8 +294,24 @@ Tous les endpoints sont préfixés `/api` côté navigateur (Caddy strip le pré
 | POST | `/auth/refresh` | Cookie | Renouveler l'access token |
 | POST | `/auth/logout` | Cookie | Déconnexion (supprime le cookie) |
 | GET | `/auth/me` | Bearer | Informations du compte connecté |
-| PATCH | `/auth/me` | Bearer | Modifier ses informations |
-| DELETE | `/auth/me` | Bearer | Supprimer son compte |
+| PATCH | `/auth/change-password` | Bearer | Changer son mot de passe (ancien + nouveau) |
+| GET | `/auth/me/export` | Bearer | Export RGPD de ses données |
+| DELETE | `/auth/me` | Bearer | Supprimer son compte (RGPD) |
+| POST | `/auth/forgot-password` | — | Demander un lien de réinitialisation (envoi par email, limité 3/min) |
+| POST | `/auth/reset-password` | — | Réinitialiser le mot de passe via le token reçu par email (valable 1h) |
+| GET | `/auth/users/search` | Admin | Rechercher un client par email |
+
+### Administration des utilisateurs — `/auth/admin`
+
+| Méthode | Endpoint | Auth | Description |
+|---------|----------|------|-------------|
+| GET | `/auth/admin/users` | Admin | Lister tous les utilisateurs (filtre `?q=` sur nom/email) |
+| PATCH | `/auth/admin/users/{id}/ban` | Admin | Désactiver un compte (le user ne peut plus se connecter) |
+| PATCH | `/auth/admin/users/{id}/unban` | Admin | Réactiver un compte banni |
+| DELETE | `/auth/admin/users/{id}` | Admin | Supprimer un compte + ses rendez-vous |
+| POST | `/auth/admin/users/{id}/reset-password` | Admin | Générer un mot de passe temporaire (retourne le MDP en clair, `must_change_password=true`) |
+
+> **Sécurité** : un administrateur ne peut pas être banni, supprimé ou avoir son mot de passe réinitialisé via ces endpoints.
 
 ### OAuth — `/auth/google` et `/auth/facebook`
 
@@ -366,6 +392,8 @@ draft ──► validated ──► sent ──► paid
 |---------|----------|------|-------------|
 | GET | `/settings/home-service` | — | État prestation à domicile + supplément |
 | PUT | `/settings/home-service` | Admin | Activer/désactiver + modifier le supplément |
+| GET | `/settings/vat` | — | Régime TVA (`vat_exempt: true/false`) |
+| PUT | `/settings/vat` | Admin | Basculer entre franchise en base et assujetti TVA |
 
 ### Uploads — `/uploads`
 
@@ -409,18 +437,22 @@ draft ──► validated ──► sent ──► paid
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
 RESEND_FROM=Les Ongles de Doriane <noreply@votre-domaine.fr>
 ADMIN_EMAIL=doriane@votre-domaine.fr
+FRONTEND_URL=https://votre-domaine.fr
 ```
 
 **Emails envoyés automatiquement :**
-- À la **création d'un RDV** par un client → notification à l'admin
+- À la **création d'un RDV** par un client → notification à l'admin (`ADMIN_EMAIL`)
 - À la **confirmation** d'un RDV par l'admin → email au client
 - À l'**envoi d'une facture** → email au client avec PDF joint
+- Sur **demande de réinitialisation de mot de passe** → lien valable 1h envoyé au client
+
+> Le lien de réinitialisation est construit à partir de `FRONTEND_URL`. S'assurer que cette variable est bien renseignée pour que les emails de reset fonctionnent.
 
 ---
 
-## Factures — configuration PDF
+## Factures — configuration PDF et TVA
 
-Les informations de l'entreprise apparaissant sur les factures PDF sont configurées via des variables d'environnement :
+### Informations entreprise sur le PDF
 
 ```env
 BUSINESS_NAME=Les Ongles de Doriane
@@ -430,9 +462,18 @@ BUSINESS_EMAIL=contact@votre-domaine.fr
 BUSINESS_SIRET=000 000 000 00000
 ```
 
-**TVA :** le taux est choisi à la création de chaque facture (défaut 20 %). Mettre 0 pour un régime de TVA non applicable (auto-entrepreneur sous seuil).
+### Régime TVA
 
-**Calcul automatique :**
+Le régime TVA est configurable depuis **Admin → Calendrier → section "Régime TVA"** :
+
+| Mode | Description |
+|------|-------------|
+| **Franchise en base** (défaut) | Micro-entrepreneur sous 37 500 € de CA. TVA non facturée. La mention légale *"TVA non applicable, article 293 B du CGI"* est automatiquement ajoutée sur le PDF et dans l'email. |
+| **Assujetti à la TVA** | Dépasse le seuil. Le taux de TVA est éditable à la création de chaque facture (défaut : 20 %). |
+
+> Changer ce paramètre n'affecte que les **nouvelles** factures créées après le changement. Les factures existantes conservent leur taux.
+
+**Calcul automatique (mode assujetti) :**
 - Prix TTC = montant du rendez-vous
 - Montant HT = TTC ÷ (1 + taux/100)
 - TVA = TTC − HT
@@ -542,7 +583,7 @@ Caddy obtient automatiquement un certificat TLS via Let's Encrypt au premier dé
 │   ├── seed_admin.py                # Script création compte admin
 │   ├── database.py                  # Connexion SQLAlchemy
 │   ├── dependencies.py              # get_current_user, require_admin
-│   ├── email_service.py             # Envoi emails via Resend
+│   ├── email_service.py             # Envoi emails via Resend (RDV, factures, reset MDP)
 │   ├── limiter.py                   # Rate limiter (slowapi)
 │   ├── requirements.txt             # Dépendances Python
 │   ├── entrypoint.sh                # create_db.py puis uvicorn
@@ -550,9 +591,9 @@ Caddy obtient automatiquement un certificat TLS via Let's Encrypt au premier dé
 │   ├── static/uploads/              # Images uploadées (volume Docker)
 │   └── modules/
 │       ├── users/
-│       │   ├── models.py            # Modèle User (email, OAuth, rôle)
-│       │   ├── routes.py            # Auth : login, register, refresh, profil
-│       │   ├── auth.py              # JWT : création, décodage, bcrypt
+│       │   ├── models.py            # Modèle User (email, OAuth, rôle, is_active)
+│       │   ├── routes.py            # Auth, reset MDP, gestion admin des comptes
+│       │   ├── auth.py              # JWT : access, refresh, reset token (1h)
 │       │   └── oauth.py             # OAuth Google + Facebook
 │       ├── services/
 │       │   ├── models.py            # Modèle Service (jusqu'à 3 images)
@@ -563,7 +604,7 @@ Caddy obtient automatiquement un certificat TLS via Let's Encrypt au premier dé
 │       ├── invoices/
 │       │   ├── models.py            # Modèle Invoice (draft→validated→sent→paid)
 │       │   ├── routes.py            # CRUD factures, envoi email, PDF
-│       │   └── pdf.py               # Génération PDF avec fpdf2
+│       │   └── pdf.py               # Génération PDF avec fpdf2 + police DejaVu (Unicode)
 │       ├── gallery/
 │       │   ├── models.py            # Modèle GalleryPhoto
 │       │   └── routes.py            # CRUD galerie
@@ -571,7 +612,7 @@ Caddy obtient automatiquement un certificat TLS via Let's Encrypt au premier dé
 │       │   └── routes.py            # Horaires hebdo, jours fermés
 │       ├── settings/
 │       │   ├── models.py            # AppSettings (clé/valeur)
-│       │   └── routes.py            # Prestation à domicile
+│       │   └── routes.py            # Prestation à domicile, régime TVA
 │       └── uploads/
 │           └── routes.py            # Upload d'images
 │
@@ -588,24 +629,27 @@ Caddy obtient automatiquement un certificat TLS via Let's Encrypt au premier dé
 │   │   │   └── auth.js              # getAccessToken, restoreSession, logout
 │   │   ├── layout/
 │   │   │   ├── PublicLayout.jsx     # Header public (logo, nav, Instagram)
-│   │   │   └── DashboardLayout.jsx  # Sidebar admin
+│   │   │   └── DashboardLayout.jsx  # Sidebar admin (Planning, RDV, Factures, Utilisateurs…)
 │   │   └── pages/
 │   │       ├── Home.jsx             # Accueil (hero, prestations, galerie)
 │   │       ├── Prestations.jsx      # Catalogue prestations (carousel 3 images)
 │   │       ├── Galerie.jsx          # Galerie photos
 │   │       ├── Reservation.jsx      # Formulaire de réservation
-│   │       ├── Login.jsx            # Connexion (email + Google + Facebook)
-│   │       ├── Register.jsx         # Inscription (email + Google + Facebook)
+│   │       ├── Login.jsx            # Connexion (email + Google + Facebook + lien reset MDP)
+│   │       ├── Register.jsx         # Inscription
 │   │       ├── MonProfil.jsx        # Profil client + historique RDV
+│   │       ├── MotDePasseOublie.jsx # Formulaire "mot de passe oublié"
+│   │       ├── ReinitialiserMdp.jsx # Formulaire nouveau mot de passe (token email)
 │   │       ├── MentionsLegales.jsx
 │   │       ├── Confidentialite.jsx
 │   │       └── admin/
-│   │           ├── AdminPlanning.jsx    # Calendrier mensuel des RDV
-│   │           ├── AdminRendezVous.jsx  # Gestion des RDV
-│   │           ├── AdminFactures.jsx    # Gestion des factures
-│   │           ├── AdminPrestations.jsx # Gestion des prestations
-│   │           ├── AdminGalerie.jsx     # Gestion de la galerie
-│   │           └── AdminCalendrier.jsx  # Horaires + jours fermés + paramètres
+│   │           ├── AdminPlanning.jsx      # Calendrier mensuel des RDV
+│   │           ├── AdminRendezVous.jsx    # Gestion des RDV
+│   │           ├── AdminFactures.jsx      # Gestion des factures
+│   │           ├── AdminUtilisateurs.jsx  # Gestion des comptes (ban, reset, suppression)
+│   │           ├── AdminPrestations.jsx   # Gestion des prestations
+│   │           ├── AdminGalerie.jsx       # Gestion de la galerie
+│   │           └── AdminCalendrier.jsx    # Horaires + jours fermés + domicile + TVA
 │
 └── scripts/
     ├── migrate_v2.sql               # Migration post-prod initiale

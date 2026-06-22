@@ -3,12 +3,13 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { logout } from "../utils/auth";
 
 const links = [
-  { to: "/admin/planning",    label: "Planning",    icon: "📆" },
-  { to: "/admin/rendez-vous", label: "Rendez-vous", icon: "📋" },
-  { to: "/admin/factures",    label: "Factures",    icon: "🧾" },
-  { to: "/admin/prestations", label: "Prestations", icon: "💅" },
-  { to: "/admin/galerie",     label: "Galerie",     icon: "🖼️" },
-  { to: "/admin/calendrier",  label: "Calendrier",  icon: "🗓️" },
+  { to: "/admin/planning",      label: "Planning",      icon: "📆" },
+  { to: "/admin/rendez-vous",   label: "Rendez-vous",   icon: "📋" },
+  { to: "/admin/factures",      label: "Factures",      icon: "🧾" },
+  { to: "/admin/utilisateurs",  label: "Utilisateurs",  icon: "👤" },
+  { to: "/admin/prestations",   label: "Prestations",   icon: "💅" },
+  { to: "/admin/galerie",       label: "Galerie",       icon: "🖼️" },
+  { to: "/admin/calendrier",    label: "Calendrier",    icon: "🗓️" },
 ];
 
 export default function DashboardLayout() {
