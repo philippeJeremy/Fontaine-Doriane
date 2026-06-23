@@ -207,36 +207,6 @@ Au premier démarrage, le backend exécute automatiquement `create_db.py` qui :
 
 ---
 
-## Migrations de base de données
-
-Les migrations sont idempotentes (peuvent être rejouées sans risque).
-
-### Migration v2 — fonctionnalités post-prod initiale
-
-```bash
-docker cp scripts/migrate_v2.sql fontaine-doriane-db-1:/tmp/
-docker exec fontaine-doriane-db-1 psql -U $POSTGRES_USER -d $POSTGRES_DB -f /tmp/migrate_v2.sql
-```
-
-Ajoute :
-- Colonne `address` sur `working_hours` (adresse par jour de travail)
-- Colonnes `is_home_service`, `client_address`, `home_service_surcharge` sur `appointments`
-- Table `app_settings` avec données initiales
-- Colonnes `image_url_2`, `image_url_3` sur `services`
-- Colonnes `google_id`, `facebook_id` sur `users` + `hashed_password` nullable
-
-### Migration v3 — gestion des factures
-
-```bash
-docker cp scripts/migrate_v3.sql fontaine-doriane-db-1:/tmp/
-docker exec fontaine-doriane-db-1 psql -U $POSTGRES_USER -d $POSTGRES_DB -f /tmp/migrate_v3.sql
-```
-
-Ajoute :
-- Table `invoices` (factures liées aux rendez-vous)
-
----
-
 ## Créer le compte administrateur
 
 ```bash
