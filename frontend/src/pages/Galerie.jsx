@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { api } from "../utils/api";
 
 export default function Galerie() {
@@ -15,6 +16,11 @@ export default function Galerie() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
+      <Helmet>
+        <title>Galerie Nail Art | Les Ongles de Doriane — Guidel</title>
+        <meta name="description" content="Galerie photos de réalisations nail art à Guidel. Pose gel, nail art, décorations — inspirations pour vos ongles." />
+        <link rel="canonical" href="https://les-ongles-de-doriane.fr/galerie" />
+      </Helmet>
       <div className="text-center mb-10">
         <p className="text-sauge-400 text-sm tracking-widest uppercase mb-2">Portfolio</p>
         <h1 className="text-4xl font-bold text-stone-800">Notre galerie</h1>

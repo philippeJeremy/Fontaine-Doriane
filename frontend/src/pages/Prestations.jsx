@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { api } from "../utils/api";
 
 function ServiceCarousel({ service }) {
@@ -92,6 +93,11 @@ export default function Prestations() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
+      <Helmet>
+        <title>Nos Prestations | Les Ongles de Doriane — Nail Art à Guidel</title>
+        <meta name="description" content="Découvrez toutes les prestations de nail art à Guidel : pose gel, nail art, soins des ongles. Tarifs et réservation en ligne." />
+        <link rel="canonical" href="https://les-ongles-de-doriane.fr/prestations" />
+      </Helmet>
       <div className="text-center mb-12">
         <p className="text-sauge-400 text-sm tracking-widest uppercase mb-2">Menu</p>
         <h1 className="text-4xl font-bold text-stone-800">Nos prestations</h1>

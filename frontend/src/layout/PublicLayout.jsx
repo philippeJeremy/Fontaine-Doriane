@@ -175,7 +175,7 @@ export default function PublicLayout() {
             <p>Nail Artist — Pose, Soin & Nail Art</p>
           </div>
           <div className="space-y-1">
-            <p>📍 Votre adresse, Ville</p>
+            <p>📍 Guidel, 56520</p>
             <p>📞 06 XX XX XX XX</p>
             <p>✉️ contact@les-ongles-de-doriane.fr</p>
             <a
