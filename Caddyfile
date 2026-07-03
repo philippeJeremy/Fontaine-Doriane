@@ -1,4 +1,4 @@
-server.philippejeremy.fr {
+lesonglesdedorianne.fr {
     # ── Headers de sécurité ───────────────────────────────────────────────────
     header {
         X-Frame-Options             "DENY"
