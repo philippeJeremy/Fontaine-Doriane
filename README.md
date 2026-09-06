@@ -21,6 +21,7 @@ Site de réservation en ligne pour un salon de nail art. Inclut un espace client
 13. [Sauvegardes et restauration](#sauvegardes-et-restauration)
 14. [Mode développement local](#mode-développement-local)
 15. [Déploiement en production](#déploiement-en-production)
+16. [Sécurité et intégration continue](#sécurité-et-intégration-continue)
 
 ---
 
@@ -525,6 +526,70 @@ docker compose restart backend
 ```
 
 Caddy obtient automatiquement un certificat TLS via Let's Encrypt au premier démarrage (port 80 et 443 doivent être ouverts).
+
+> **Historique Git réécrit le 2026-09-06** : le dépôt est passé public, l'historique
+> a été aplati en un seul commit et les photos clientes retirées du suivi Git
+> (`backend/static/uploads/` est maintenant dans `.gitignore`, le dossier est
+> recréé automatiquement au démarrage du backend). Sur un serveur déjà cloné,
+> se resynchroniser avec `git fetch origin && git reset --hard origin/main`.
+
+---
+
+## Sécurité et intégration continue
+
+Le dépôt est **public**. Trois garde-fous automatiques tournent sur chaque *pull
+request*, sur `push` vers `main`, et une fois par semaine (lundi 6h UTC) — un
+scan hebdomadaire attrape les CVE publiées après coup sur une dépendance qui n'a
+pas bougé.
+
+### Workflows GitHub Actions (`.github/workflows/`)
+
+| Workflow | Fichier | Ce qu'il vérifie | Bloquant ? |
+|----------|---------|------------------|------------|
+| **Audit des dépendances** | `dependency-audit.yml` | `pip-audit` sur `backend/requirements.txt`, `npm audit` sur `frontend/` (deps *runtime* uniquement, `--omit=dev`), `Trivy` (CVE + secrets commités) | ✅ à partir de *high* |
+| — même workflow | | `Trivy` durcissement Dockerfile / IaC (conteneur en root, `apt` sans `--no-install-recommends`…) | ⚠️ informatif |
+| **Analyse du code (SAST)** | `code-scan.yml` | `Semgrep` OSS — failles dans le code applicatif (injection, path traversal, désérialisation, mauvais usage crypto, patterns FastAPI/React) | ⚠️ informatif *(le temps de trier le premier passage)* |
+
+Pourquoi `npm audit --omit=dev` : la prod est un build statique servi par Caddy,
+seules les dépendances runtime finissent dans le bundle livré aux visiteurs. Les
+failles des outils de dev (Vite, esbuild : serveur de dev local) restent visibles
+via les alertes Dependabot et un `npm audit` complet non bloquant.
+
+### Dependabot (`.github/dependabot.yml`)
+
+- **Alertes** de vulnérabilité + **mises à jour de sécurité** activées côté dépôt.
+- **Mises à jour de version** hebdomadaires : `pip` (backend), `npm` (frontend),
+  images Docker (backend + frontend), actions GitHub. Les patch/mineur sont
+  regroupés en une seule PR par écosystème.
+
+> ℹ️ Le dépôt étant public, la *branch protection* est disponible même en plan
+> **Free**. Tant qu'elle n'est pas activée (Settings → Branches → règle sur
+> `main` : *Require status checks to pass*), les workflows affichent le résultat
+> sur les PR mais **n'empêchent pas** un merge en échec — discipline : ne merger
+> que si le CI est vert.
+
+### Lancer les audits en local
+
+```bash
+# Backend — CVE des dépendances Python
+pip install pip-audit
+pip-audit -r backend/requirements.txt
+
+# Frontend — CVE des dépendances npm (ce qui part en prod)
+cd frontend && npm audit --omit=dev --audit-level=high
+
+# SAST — failles dans le code
+pip install semgrep
+semgrep scan --config p/default --config p/python --config p/javascript \
+  --config p/react --config p/secrets --error
+```
+
+### Ce qui reste à traiter
+
+Suivi dans `reste a faire.txt` à la racine (fichier de travail local, non
+suivi par Git) : montées de versions majeures en attente côté Dependabot,
+conteneurs à passer en `USER` non-root, `--ignore-vuln` temporaires à retirer
+une fois `fastapi`/`starlette` mis à jour.
 
 ---
 
