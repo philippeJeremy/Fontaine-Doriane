@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /profil
+Disallow: /connexion
+Disallow: /inscription
+Disallow: /reserver
+
+Sitemap: https://lesonglesdedorianne.fr/sitemap.xml

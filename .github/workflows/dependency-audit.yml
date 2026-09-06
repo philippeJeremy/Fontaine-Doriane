@@ -1,0 +1,79 @@
+name: Audit des dépendances
+
+# Sur chaque PR/push vers main (attrape une dépendance vulnérable ajoutée
+# volontairement) ET une fois par semaine (attrape une CVE publiée après
+# coup sur une dépendance déjà en place, sans qu'aucun code n'ait changé).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1" # lundi 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    name: pip-audit (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: pip-audit sur ${{ matrix.service }}/requirements.txt
+        run: |
+          pip install --quiet pip-audit
+          pip-audit -r "${{ matrix.service }}/requirements.txt"
+
+  npm-audit:
+    name: npm audit (frontend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installation (lockfile figé)
+        working-directory: frontend
+        run: npm ci
+
+      - name: npm audit — bloque à partir de "high"
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+  trivy-fs:
+    name: Trivy (dépendances + configuration)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Mode "fs" : scanne les requirements.txt / package-lock.json / Dockerfiles
+      # directement dans le dépôt, sans construire les images — rapide, et
+      # complète pip-audit/npm audit avec sa propre base de vulnérabilités
+      # (parfois plus à jour ou plus large) plus quelques vérifs de
+      # configuration (secrets commités, Dockerfile non durci...).
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          # vuln = CVE des dépendances, secret = clés/API commitées,
+          # misconfig = Dockerfile/IaC non durcis (pas actif par défaut).
+          scanners: "vuln,secret,misconfig"
+          severity: "HIGH,CRITICAL"
+          exit-code: "1"
+          ignore-unfixed: true

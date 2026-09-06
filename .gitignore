@@ -1,0 +1,16 @@
+docker-compose.override.yaml
+.env
+.env.*
+__pycache__/
+*.pyc
+node_modules/
+dist/
+*.csv
+*.xlsx
+note.txt
+.claude/
+seed_admin.py
+logs/
+CLAUDE.md
+plan_action.txt
+backend/static/uploads/

@@ -1,0 +1,48 @@
+version: 2
+
+# ── Backend (pip) ──────────────────────────────────────────────────────
+updates:
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "backend"
+    groups:
+      patch-et-mineur:
+        update-types: ["patch", "minor"]
+
+  # ── Frontend (npm) ──────────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "frontend"
+    groups:
+      patch-et-mineur:
+        update-types: ["patch", "minor"]
+
+  # ── Images de base Docker (un Dockerfile backend + frontend) ────────
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+
+  # ── Les workflows CI eux-mêmes (actions/checkout, etc.) ─────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"

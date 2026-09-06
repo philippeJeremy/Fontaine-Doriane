@@ -1,0 +1,26 @@
+# Redirige www → sans www (meilleur pour le SEO)
+www.lesonglesdedorianne.fr {
+    redir https://lesonglesdedorianne.fr{uri} permanent
+}
+
+lesonglesdedorianne.fr {
+    # ── Headers de sécurité ───────────────────────────────────────────────────
+    header {
+        X-Frame-Options             "DENY"
+        X-Content-Type-Options      "nosniff"
+        X-XSS-Protection            "0"
+        Referrer-Policy             "strict-origin-when-cross-origin"
+        Permissions-Policy          "geolocation=(), microphone=(), camera=()"
+        Strict-Transport-Security   "max-age=31536000; includeSubDomains"
+        -Server
+    }
+
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy backend:8000
+    }
+
+    handle {
+        reverse_proxy frontend:3000
+    }
+}
