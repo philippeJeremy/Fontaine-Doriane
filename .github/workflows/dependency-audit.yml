@@ -33,7 +33,12 @@ jobs:
       - name: pip-audit sur ${{ matrix.service }}/requirements.txt
         run: |
           pip install --quiet pip-audit
-          pip-audit -r "${{ matrix.service }}/requirements.txt"
+          # PYSEC-2026-1325 : side-channel temporel dans ecdsa (dépendance
+          # transitive de python-jose) — les mainteneurs ne corrigeront pas
+          # (documenté). Aucune version de correction n'existe -> on l'ignore
+          # explicitement pour ne pas bloquer le CI éternellement.
+          pip-audit -r "${{ matrix.service }}/requirements.txt" \
+            --ignore-vuln PYSEC-2026-1325
 
   npm-audit:
     name: npm audit (frontend)
@@ -67,7 +72,7 @@ jobs:
       # (parfois plus à jour ou plus large) plus quelques vérifs de
       # configuration (secrets commités, Dockerfile non durci...).
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: "fs"
           scan-ref: "."

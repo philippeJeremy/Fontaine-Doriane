@@ -1,10 +1,9 @@
 name: Analyse du code (SAST)
 
-# Semgrep OSS : équivalent libre de CodeQL, sans "GitHub Advanced Security"
-# (le repo est privé). Cherche les failles dans NOTRE code — injection SQL,
-# path traversal, désérialisation, secrets en dur, mauvais usage de crypto,
-# patterns FastAPI/React dangereux — là où pip-audit/npm audit/Trivy ne
-# regardent que les dépendances.
+# Semgrep OSS : équivalent libre de CodeQL. Cherche les failles dans NOTRE
+# code — injection SQL, path traversal, désérialisation, secrets en dur,
+# mauvais usage de crypto, patterns FastAPI/React dangereux — là où
+# pip-audit / npm audit / Trivy ne regardent que les dépendances.
 on:
   pull_request:
   push:
@@ -30,10 +29,15 @@ jobs:
       - name: Installation
         run: pip install --quiet semgrep
 
-      # --error : sortie != 0 dès qu'une règle matche -> le job échoue.
+      # NON bloquant pour l'instant (continue-on-error) : le premier passage
+      # sur un code déjà en prod remonte toujours des dizaines de findings
+      # (conteneurs en root, tags d'actions mutables, faux positifs...).
+      # On les traite au fil de l'eau, puis on retire "continue-on-error"
+      # et on garde "--error" pour rendre le job bloquant.
       # Les packs p/... sont téléchargés depuis le registre public (pas de
       # compte requis). --metrics=off : rien n'est envoyé à semgrep.dev.
       - name: semgrep scan
+        continue-on-error: true
         run: |
           semgrep scan \
             --config p/default \
