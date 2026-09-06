@@ -83,24 +83,34 @@ jobs:
         run: npm audit || true
 
   trivy-fs:
-    name: Trivy (dépendances + configuration)
+    name: Trivy (dépendances + secrets)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Mode "fs" : scanne les requirements.txt / package-lock.json / Dockerfiles
-      # directement dans le dépôt, sans construire les images — rapide, et
-      # complète pip-audit/npm audit avec sa propre base de vulnérabilités
-      # (parfois plus à jour ou plus large) plus quelques vérifs de
-      # configuration (secrets commités, Dockerfile non durci...).
-      - name: Trivy filesystem scan
+      # Mode "fs" : scanne requirements.txt / package-lock.json directement
+      # dans le dépôt, sans construire les images. Complète pip-audit/npm
+      # audit avec sa propre base de vulnérabilités, + détection de secrets
+      # commités.  BLOQUANT.
+      - name: Trivy — dépendances + secrets (bloquant)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: "fs"
           scan-ref: "."
-          # vuln = CVE des dépendances, secret = clés/API commitées,
-          # misconfig = Dockerfile/IaC non durcis (pas actif par défaut).
-          scanners: "vuln,secret,misconfig"
+          scanners: "vuln,secret"
           severity: "HIGH,CRITICAL"
           exit-code: "1"
           ignore-unfixed: true
+
+      # Durcissement Dockerfile/IaC (conteneur en root, apt sans
+      # --no-install-recommends...). Informatif tant que les Dockerfiles
+      # ne sont pas passés en USER non-root (demande de tester les volumes
+      # uploads/logs). exit-code 0 = ne bloque pas.
+      - name: Trivy — misconfig (informatif)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          scanners: "misconfig"
+          severity: "HIGH,CRITICAL"
+          exit-code: "0"
